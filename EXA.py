@@ -1,13 +1,12 @@
 from registers import *
-global level
 
 class EXA:
-    def __init__(self, code, host, name, line = 0, scope = 'GLOBAL', x = Register(0), t = Register(0)):
+    def __init__(self, level, code, host, name, start = 0, scope = 'GLOBAL', x = Register(0), t = Register(0)):
         self.name = name
         self.code = code
-        self.line = line
         self.host = host
         self.cycle = level.cyc
+        self.level = level
         self.registers = {
             'X': x,
             'T': t,
@@ -16,8 +15,26 @@ class EXA:
         }
         self.children = []
         self.labels = {}
+
+        self.line = 0
+        for line in code:
+            if line[0] == 'MARK':
+                self.mark(line[1:])
+            self.line += 1
+        self.line = start
+
     def __repr__(self):
-        return self.name + ': Line ' + str(self.line + 1) + '/' + str(len(self.code)) + '\n' + str(self.registers) + '\n' + str(self.host)
+        line = str(self.line + 1) + '/' + str(len(self.code))
+        if self.line + 1 > len(self.code):
+            line = 'HALTED'
+        string = ('\n' +
+                    self.name + ': Line ' + line +
+                    '\n' + str(self.registers) +
+                    '\n' + str(self.host))
+        if self.registers['F'] != None:
+            string += '\n' + self.registers['F'].reprlong()
+        string += '\n'
+        return string
     def clamp(self, val):
         if val > 9999:
             val = 9999
@@ -118,24 +135,24 @@ class EXA:
         args = self.typeArgs(args, ['L'])
         if args[0] in self.labels:
             raise Exception('Label already defined')
-        self.labels[args[0]] = self.index
+        self.labels[args[0]] = self.line
     def jump(self, args):
         args = self.typeArgs(args, ['L'])
         if args[0] not in self.labels:
             raise Exception('Label not defined')
-        self.index = self.labels[args[0]]
+        self.line = self.labels[args[0]]
     def tjmp(self, args):
         args = self.typeArgs(args, ['L'])
         if args[0] not in self.labels:
             raise Exception('Label not defined')
         if self.registers['T'].value() == 1:
-            self.index = self.labels[args[0]]
+            self.line = self.labels[args[0]]
     def fjmp(self, args):
         args = self.typeArgs(args, ['L'])
         if args[0] not in self.labels:
             raise Exception('Label not defined')
         if self.registers['T'].value() == 0:
-            self.index = self.labels[args[0]]
+            self.line = self.labels[args[0]]
 
             # Conditions
 
@@ -184,13 +201,13 @@ class EXA:
         args = self.typeArgs(args, ['L'])
         if args[0] not in self.labels:
             raise Exception('Label not defined')
-        exa = EXA(self.code, self.host, self.name + ':' + len(self.children), self.labels[args[0]], self.scope, Register(self.registers['X'].value()), Register(self.registers['T'].value()))
-        level.exas.append(exa)
+        exa = EXA(self.level, self.code, self.host, self.name + ':' + len(self.children), self.labels[args[0]], self.scope, Register(self.registers['X'].value()), Register(self.registers['T'].value()))
+        self.level.exas.append(exa)
         self.children.append(exa)
-    def halt(self):
-        self.index = len(self.code)
-    def kill(self):
-        level.kill(self.name, self.host)
+    def halt(self, args):
+        self.line = len(self.code)
+    def kill(self, args):
+        self.level.kill(self.name, self.host)
 
             # Movement
 
@@ -198,8 +215,8 @@ class EXA:
         args = self.typeArgs(args, ['R/N'])
         if type(args[0]) != int:
             raise Exception('NUMERIC VALUE REQUIRED')
-        if str(args[0]) in level.hosts[self.host]['links']:
-            self.host = level.hosts[self.host]['links'][str(args[0])]
+        if str(args[0]) in self.level.hosts[self.host]['links']:
+            self.host = self.level.hosts[self.host]['links'][str(args[0])]
             if self.registers['F'] != None:
                 self.registers['F'].link(self.host)
         else:
@@ -210,7 +227,7 @@ class EXA:
 
             # Communication
 
-    def mode(self):
+    def mode(self, args):
         self.registers['M'].mode()
     def voidm(self):
         self.registers['M'].value()
@@ -219,10 +236,10 @@ class EXA:
 
             # File Manipulation
 
-    def make(self):
+    def make(self, args):
         if self.registers['F'] == None:
             i = 400
-            while i in level.files():
+            while i in self.level.files():
                 i += 1
             self.registers['F'] = File([], i, self.host)
         else:
@@ -233,8 +250,8 @@ class EXA:
         args = self.typeArgs(args, ['R/N'])
         if type(args[0]) != int:
             raise Exception('NUMERIC VALUE REQUIRED')
-        if level.grab(self.host, args[0]):
-            self.registers['F'] = level.grab(self.host, args[0])
+        if self.level.grab(self.host, args[0]):
+            self.registers['F'] = self.level.grab(self.host, args[0])
         else:
             raise Exception('FILE ID NOT FOUND')
     def file(self, args):
@@ -253,11 +270,11 @@ class EXA:
         if self.registers['F'] == None:
             raise Exception('NO FILE IS HELD')
         self.registers['F'].void()
-    def drop(self):
+    def drop(self, args):
         if self.registers['F'] == None:
             raise Exception('NO FILE IS HELD')
         self.registers['F'] = None
-    def wipe(self):
+    def wipe(self, args):
         if self.registers['F'] == None:
             raise Exception('NO FILE IS HELD')
         self.registers['F'].wipe()
@@ -272,7 +289,7 @@ class EXA:
             # Miscellaneous
 
     # def rand(self, args):
-    #     # if level.noRandom:
+    #     # if self.level.noRandom:
     #     #     raise Exception('RAND not allowed here')
     #     args = self.typeArgs(args, ['R/N', 'R/N', 'R'])
     #     if type(args[0]) != int or type(args[1]) != int:
@@ -283,9 +300,28 @@ class EXA:
 
     def eval(self, cyc):
         if self.cycle < cyc and self.line < len(self.code):
-            line = self.code[self.line]
-            if line[0] not in ['TEST', 'VOID']:
-                getattr(self, line[0].lower())(line[1:])
             print(self)
+            line = self.code[self.line]
+            if line[0] not in ['TEST', 'VOID', 'NOOP', 'NOTE', 'MARK']:
+                getattr(self, line[0].lower())(line[1:])
+            elif line[0] == 'VOID':
+                if line[1] == 'M':
+                    self.voidm()
+                elif line[1] == 'F':
+                    self.voidf()
+            elif line[0] == 'TEST':
+                if line[1] == 'EOF':
+                    self.testeof()
+                elif line[1] == 'MRD':
+                    self.testmrd()
+                else:
+                    if line[2] == '=':
+                        self.teste([line[1], line[3]])
+                    if line[2] == '>':
+                        self.testg([line[1], line[3]])
+                    if line[2] == '<':
+                        self.testl([line[1], line[3]])
             self.line += 1
             self.cycle += 1
+            if self.line == len(self.code):
+                print(self)

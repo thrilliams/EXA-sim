@@ -1,17 +1,15 @@
 from EXA import *
 import json
-from time import sleep
+# from time import sleep
 from random import choice
 
 class Level:
-    def init(self, file):
+    def __init__(self, levels):
         self.cyc = 0
         self.exas = []
 
 
-        file = open(file, 'r')
-        data = json.loads(file.read())
-        file.close()
+        data = json.loads(levels)
         for host in data['hosts']:
             for i in range(len(data['hosts'][host]['files'])):
                 data['hosts'][host]['files'][i] = File(data['hosts'][host]['files'][i][0], data['hosts'][host]['files'][i][1], host)
@@ -34,7 +32,7 @@ class Level:
                         code[i][j] = code[i][j]
             while [] in code:
                 code.remove([])
-            self.exas.append(EXA(code, 'AHIZOME', 'X' + chr(ord('A') + len(self.exas))))
+            self.exas.append(EXA(self, code, 'AHIZOME', 'X' + chr(ord('A') + len(self.exas))))
 
 
         self.cycle()
@@ -61,8 +59,9 @@ class Level:
             exa.eval(self.cyc)
         if any([e.line < len(e.code) for e in self.exas]): # if any EXAs still have instructions to run
             self.cyc += 1
-            sleep(1)
+            # sleep(0.25)
             self.cycle()
 
-__builtins__.level = Level()
-level.init('level.json')
+# file = open('level.json', 'r')
+# Level(file.read())
+# file.close()
