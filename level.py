@@ -62,6 +62,6 @@ class Level:
             # sleep(0.25)
             self.cycle()
 
-# file = open('level.json', 'r')
-# Level(file.read())
-# file.close()
+file = open('level.json', 'r')
+Level(file.read())
+file.close()
