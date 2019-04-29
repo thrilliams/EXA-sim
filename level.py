@@ -1,4 +1,5 @@
-from EXA import *
+from EXA import EXA
+import registers as r
 # from time import sleep
 from random import choice
 
@@ -6,19 +7,19 @@ class Level:
     def __init__(self, data):
         self.cyc = 0
         self.exas = []
+        data['hosts'] = dict(data['hosts'])
 
-
-        for host in data['hosts']:
-            for i in range(len(data['hosts'][host]['files'])):
-                data['hosts'][host]['files'][i] = File(data['hosts'][host]['files'][i][0], data['hosts'][host]['files'][i][1], host)
+        for host in data['hosts'].items():
+            for i in range(len(host[1]['files'])):
+                host[1]['files'][i] = r.File(host[1]['files'][i][0], host[1]['files'][i][1], host[0])
         self.hosts = data['hosts']
 
 
         for code in data['exas']:
             for i in range(len(code)):
-                try:
-                    code[i] = code[i][0:code[i].index('#')].split()
-                except ValueError:
+                if code[i].find('#') > -1:
+                    code[i] = code[i][0:code[i].find('#')].split()
+                else:
                     code[i] = code[i].split()
                 for j in range(len(code[i])):
                     try:
@@ -35,8 +36,9 @@ class Level:
         return str(self.hosts)
     def files(self):
         files = []
-        for host in self.hosts:
-            files += self.hosts[host]['files']
+        for host in self.hosts.items():
+            for file in host[1]['files']:
+                files.append(file)
         return files
     def grab(self, host, id):
         for file in self.files():
@@ -52,7 +54,8 @@ class Level:
     def cycle(self):
         for exa in self.exas:
             exa.eval(self.cyc)
-        if any([e.line < len(e.code) for e in self.exas]): # if any EXAs still have instructions to run
+        if any([e.line < len(e.code) for e in self.exas]):
+            # if any EXAs still have instructions to run
             self.cyc += 1
             # sleep(0.25)
             self.cycle()

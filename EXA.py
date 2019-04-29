@@ -1,17 +1,17 @@
-from registers import *
+import registers as r
 
 class EXA:
-    def __init__(self, level, code, host, name, start = 0, scope = 'GLOBAL', x = Register(0), t = Register(0)):
+    def __init__(self, level, code, host, name, start = 0, scope = 'GLOBAL', x = r.Register(0), t = r.Register(0)):
         self.name = name
         self.code = code
-        self.host = host
+        self.location = host
         self.cycle = level.cyc
         self.level = level
         self.registers = {
             'X': x,
             'T': t,
             'F': None,
-            'M': Communication(scope, self)
+            'M': r.Communication(scope, self)
         }
         self.children = []
         self.labels = {}
@@ -30,7 +30,7 @@ class EXA:
         string = ('\n' +
                     self.name + ': Line ' + line +
                     '\n' + str(self.registers) +
-                    '\n' + str(self.host))
+                    '\n' + str(self.location))
         if self.registers['F'] != None:
             string += '\n' + self.registers['F'].reprlong()
         string += '\n'
@@ -201,13 +201,13 @@ class EXA:
         args = self.typeArgs(args, ['L'])
         if args[0] not in self.labels:
             raise Exception('Label not defined')
-        exa = EXA(self.level, self.code, self.host, self.name + ':' + len(self.children), self.labels[args[0]], self.scope, Register(self.registers['X'].value()), Register(self.registers['T'].value()))
+        exa = EXA(self.level, self.code, self.location, self.name + ':' + len(self.children), self.labels[args[0]], self.scope, r.Register(self.registers['X'].value()), r.Register(self.registers['T'].value()))
         self.level.exas.append(exa)
         self.children.append(exa)
     def halt(self, args):
         self.line = len(self.code)
     def kill(self, args):
-        self.level.kill(self.name, self.host)
+        self.level.kill(self.name, self.location)
 
             # Movement
 
@@ -215,15 +215,15 @@ class EXA:
         args = self.typeArgs(args, ['R/N'])
         if type(args[0]) != int:
             raise Exception('NUMERIC VALUE REQUIRED')
-        if str(args[0]) in self.level.hosts[self.host]['links']:
-            self.host = self.level.hosts[self.host]['links'][str(args[0])]
+        if str(args[0]) in self.level.hosts[self.location]['links']:
+            self.location = self.level.hosts[self.location]['links'][str(args[0])]
             if self.registers['F'] != None:
-                self.registers['F'].link(self.host)
+                self.registers['F'].link(self.location)
         else:
             raise Exception('LINK ID NOT FOUND')
     def host(self, args):
         args = self.typeArgs(args, ['R'])
-        self.registers[args[0]].assign(self.host)
+        self.registers[args[0]].assign(self.location)
 
             # Communication
 
@@ -241,7 +241,7 @@ class EXA:
             i = 400
             while i in self.level.files():
                 i += 1
-            self.registers['F'] = File([], i, self.host)
+            self.registers['F'] = r.File([], i, self.location)
         else:
             raise Exception('CANNOT GRAB A SECOND FILE')
     def grab(self, args):
@@ -250,8 +250,8 @@ class EXA:
         args = self.typeArgs(args, ['R/N'])
         if type(args[0]) != int:
             raise Exception('NUMERIC VALUE REQUIRED')
-        if self.level.grab(self.host, args[0]):
-            self.registers['F'] = self.level.grab(self.host, args[0])
+        if self.level.grab(self.location, args[0]):
+            self.registers['F'] = self.level.grab(self.location, args[0])
         else:
             raise Exception('FILE ID NOT FOUND')
     def file(self, args):
