@@ -1,0 +1,27 @@
+{
+	"meta": {
+		"name": "Ahidome"
+	},
+	"hosts": {
+		"AHIZOME": {
+			"files": [
+				[[1, 2, 3], 300]
+			],
+			"links": {
+				"800": "CORE"
+			}
+		},
+		"CORE": {
+			"files": [
+				[[1, 2, 3], 301],
+				[[1, 2, 3], 302]
+			],
+			"links": {
+				"-1": "AHIZOME"
+			}
+		}
+	},
+	"exas": [
+		"test.exa"
+	]
+}
