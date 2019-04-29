@@ -22,14 +22,7 @@ class File(Register):
     def __repr__(self):
         return str(self.id)
     def reprlong(self):
-        data = [e for e in self.data] + [' ']
-        i = []
-        for e in data:
-            i.append(str(e))
-        for e in range(len(i)):
-            if e == self.index:
-                i[e] = '\033[4m\033[1m' + i[e] + '\033[0m'
-        return ', '.join(i)
+        return ', '.join(self.data)
     def value(self):
         try:
             v = self.data[self.index]

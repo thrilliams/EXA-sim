@@ -5,7 +5,7 @@
 	"hosts": {
 		"AHIZOME": {
 			"files": [
-				[["dogs", "r", "cute"], 300]
+				[["Look", "Ma", "no", "python!"], 300]
 			],
 			"links": {
 				"800": "CORE"
